@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import com.microservices.auth_service.dto.LoginRequest;
 import com.microservices.auth_service.dto.RegisterRequest;
 import com.microservices.auth_service.entity.User;
+import com.microservices.auth_service.exception.InvalidPasswordException;
+import com.microservices.auth_service.exception.UserNotFoundException;
 import com.microservices.auth_service.repository.UserRepository;
 import com.microservices.auth_service.util.JwtUtil;
 
@@ -33,10 +35,10 @@ public class AuthService {
 
     public String login(LoginRequest req) {
         User user = userRepository.findByEmail(req.email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new  UserNotFoundException("User not found"));
 
         if (!user.getPassword().equals(req.password)) {
-            throw new RuntimeException("Invalid password");
+            throw new InvalidPasswordException("Invalid password");
         }
 
         return JwtUtil.generateToken(user.getEmail(), user.getRole());

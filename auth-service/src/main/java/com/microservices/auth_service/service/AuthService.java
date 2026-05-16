@@ -1,6 +1,7 @@
 package com.microservices.auth_service.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.microservices.auth_service.dto.LoginRequest;
@@ -20,12 +21,15 @@ public class AuthService {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public String register(RegisterRequest req) {
         User user = new User();
         user.setName(req.name);
         user.setEmail(req.email);
-        user.setPassword(req.password);
+        user.setPassword(passwordEncoder.encode(req.password));
         user.setRole(req.role);
 
         userRepository.save(user);
@@ -37,10 +41,10 @@ public class AuthService {
         User user = userRepository.findByEmail(req.email)
                 .orElseThrow(() -> new  UserNotFoundException("User not found"));
 
-        if (!user.getPassword().equals(req.password)) {
+        if (!passwordEncoder.matches(req.password, user.getPassword())) {
             throw new InvalidPasswordException("Invalid password");
         }
-
+     
         return JwtUtil.generateToken(user.getEmail(), user.getRole());
     }
 }

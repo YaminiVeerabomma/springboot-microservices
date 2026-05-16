@@ -1,6 +1,5 @@
 package com.microservices.apigateway.filter;
 
-
 import io.jsonwebtoken.Claims;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -20,8 +19,8 @@ public class JwtFilter implements GlobalFilter {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        // 🔓 Allow authentication APIs
-        if (path.startsWith("/auth")) {
+        // 🔓 Allow auth APIs (IMPORTANT FIX)
+        if (path.contains("/auth")) {
             return chain.filter(exchange);
         }
 
@@ -30,44 +29,36 @@ public class JwtFilter implements GlobalFilter {
                 .getHeaders()
                 .getFirst("Authorization");
 
-        // 🔴 Check if header is present
+        // 🔴 Check header
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
 
-        // 🔴 Extract token
         String token = authHeader.substring(7);
 
         try {
-            // 🔥 Validate and parse token
             Claims claims = JwtUtil.getClaims(token);
 
             String role = claims.get("role", String.class);
 
-            // 🔐 ROLE-BASED AUTHORIZATION
+            // 🔐 ROLE-BASED AUTH
 
-            // Only PRODUCER can add product
             if (path.startsWith("/products/add") && !"PRODUCER".equals(role)) {
                 exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                 return exchange.getResponse().setComplete();
             }
 
-            // Only ADMIN can access admin APIs
             if (path.startsWith("/admin") && !"ADMIN".equals(role)) {
                 exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                 return exchange.getResponse().setComplete();
             }
 
-            // USER, PRODUCER, ADMIN can place orders (no restriction here)
-
         } catch (Exception e) {
-            // 🔴 Invalid or expired token
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
 
-        // ✅ Continue request if everything is valid
         return chain.filter(exchange);
     }
 }
